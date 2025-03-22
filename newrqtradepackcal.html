@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>貿易包計算器</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { margin-bottom: 20px; border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #999; padding: 5px 10px; text-align: center; }
+    input { width: 60px; }
+  </style>
+</head>
+<body>
+  <h1>貿易包計算器</h1>
+
+  <h2>材料交易所單價</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>材料</th>
+        <th>交易所單價</th>
+      </tr>
+    </thead>
+    <tbody id="materials-table"></tbody>
+  </table>
+
+  <div id="new-calculators"></div>
+
+  <script>
+    const materialPrices = {
+      "Corn": 0, "Potato": 0, "Shank": 0, "Pepper": 0, "Salt": 0, "Onion": 0, "Egg": 0, "Cheese": 0,
+      "Stone": 0, "Small Log": 0, "Hide": 0, "Chicken": 0, "Milk": 0, "Copper Ore": 0, "Apple": 0,
+      "Wheat": 0, "Cabbage": 0, "Carrot": 0, "Acorn": 0, "Pumpkin": 0, "Moonberry": 0, "Pea": 0,
+      "Brocolli": 0, "Beans": 0, "Sunberry": 0, "Cherry": 0, "Ground Flour": 0, "Grape": 0, "Blueberry": 0,
+      "Banana": 0, "Watermelon": 0, "Coal": 0, "Cotton": 0, "Wool": 0, "Garlic": 0, "Beef": 0, "Honey": 0
+    };
+
+    const tradePackages = [
+      { name: "Settler's Rations", materials: [ { name: "Corn", quantity: 200 }, { name: "Potato", quantity: 650 }, { name: "Shank", quantity: 56 } ] },
+    ];
+
+    const locationFactors = {
+      Riverend: 2228,
+      Margrove: 1789,
+      "Orca Bay": 980,
+      Tarmire: 2412,
+      Darzuac: 2593,
+      Ravencrest: 1578,
+      Defiance: 2721
+    };
+
+    function renderMaterialsTable() {
+      const table = document.getElementById("materials-table");
+      table.innerHTML = Object.keys(materialPrices).map(material => `
+        <tr>
+          <td>${material}</td>
+          <td><input type="number" id="${material}-price" value="0" min="0" onchange="updateMaterialPrice('${material}')"></td>
+        </tr>
+      `).join('');
+    }
+
+    function updateMaterialPrice(material) {
+      materialPrices[material] = parseFloat(document.getElementById(`${material}-price`).value) || 0;
+      updateAllCosts();
+    }
+
+    function updateAllCosts() {
+      tradePackages.forEach(pkg => {
+        try {
+          updatePackageCosts(pkg);
+        } catch (e) {
+          console.error(`Error updating package: ${pkg.name}`, e);
+        }
+      });
+    }
+
+    function updatePackageCosts(pkg) {
+      const packageName = pkg.name.toLowerCase().replace(/\s/g, '-');
+      let totalCost = 0;
+
+      pkg.materials.forEach(material => {
+        const price = materialPrices[material.name] || 0;
+        const cost = material.quantity * price;
+
+        document.getElementById(`${packageName}-${material.name.toLowerCase()}-price`).innerText = price.toFixed(2);
+        document.getElementById(`${packageName}-${material.name.toLowerCase()}-cost`).innerText = cost.toFixed(2);
+
+        totalCost += cost;
+      });
+
+      document.getElementById(`${packageName}-total-cost`).innerText = totalCost.toFixed(2);
+      updateLocationPrices(packageName, totalCost);
+    }
+
+    function updateLocationPrices(packageName, totalCost) {
+      Object.entries(locationFactors).forEach(([location, distance]) => {
+        const key = `${packageName}-${location.toLowerCase().replace(/\s/g, '-')}`;
+        const demand = parseFloat(document.getElementById(`${key}-demand`).value) || 0;
+        const sellPrice = ((distance * 15) + 35000) * demand;
+        const profitRate = ((sellPrice - totalCost) / totalCost) * 100;
+
+        document.getElementById(`${key}-price`).innerText = sellPrice.toFixed(2);
+        document.getElementById(`${key}-profit`).innerText = isNaN(profitRate) ? '0%' : `${profitRate.toFixed(2)}%`;
+      });
+    }
+
+    function createCalculator(pkg) {
+      const container = document.createElement('div');
+      const packageName = pkg.name.toLowerCase().replace(/\s/g, '-');
+
+      container.innerHTML = `
+        <h2>${pkg.name} 計算器</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>材料</th>
+              <th>數量</th>
+              <th>交易所單價</th>
+              <th>成本</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pkg.materials.map(material => `
+              <tr>
+                <td>${material.name}</td>
+                <td>${material.quantity}</td>
+                <td id="${packageName}-${material.name.toLowerCase()}-price">0</td>
+                <td id="${packageName}-${material.name.toLowerCase()}-cost">0</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p><strong>總成本:</strong> <span id="${packageName}-total-cost">0</span></p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>地點</th>
+              <th>需求%</th>
+              <th>售出價格</th>
+              <th>利潤率</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Object.entries(locationFactors).map(([location]) => {
+              const key = `${packageName}-${location.toLowerCase().replace(/\s/g, '-')}`;
+              return `
+                <tr>
+                  <td>${location}</td>
+                  <td><input type="number" id="${key}-demand" value="0" step="0.1" onchange="updateAllCosts()"></td>
+                  <td id="${key}-price">0</td>
+                  <td id="${key}-profit">0%</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+
+      document.getElementById('new-calculators').appendChild(container);
+    }
+
+    function renderCalculators() {
+      document.getElementById('new-calculators').innerHTML = '';
+      tradePackages.forEach(pkg => createCalculator(pkg));
+    }
+
+    window.onload = () => {
+      renderMaterialsTable();
+      renderCalculators();
+      updateAllCosts();
+    };
+  </script>
+</body>
+</html>
