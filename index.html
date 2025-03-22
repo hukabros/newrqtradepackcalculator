@@ -1,14 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>貿易包計算器</title>
   <style>
-    body { font-family: Arial, sans-serif; }
-    table { margin-bottom: 10px; border-collapse: collapse; }
-    th, td { border: 1px solid #999; padding: 5px; }
-    input { width: 60px; }
+    body {
+      font-family: Arial, sans-serif;
+    }
+    table {
+      margin-bottom: 10px;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 5px;
+    }
+    input {
+      width: 60px;
+    }
+    .package-container {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    .ranking-container {
+      margin-top: 30px;
+      border: 2px solid #666;
+      padding: 10px;
+    }
+    .ranking-container table {
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
@@ -26,10 +49,42 @@
     <tbody id="materials-table"></tbody>
   </table>
 
+  <!-- 所有貿易包計算器的容器 -->
   <div id="new-calculators"></div>
 
+  <!-- 新增一個區塊：顯示利潤 & 利潤率的 TOP 3 排行 -->
+  <div id="ranking-container" class="ranking-container">
+    <h2>貿易包利潤/利潤率 排行</h2>
+
+    <h3>前三名「利潤」最高</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>名次</th>
+          <th>貿易包</th>
+          <th>最高利潤</th>
+          <th>最佳城市</th>
+        </tr>
+      </thead>
+      <tbody id="top3-profit-tbody"></tbody>
+    </table>
+
+    <h3>前三名「利潤率」最高</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>名次</th>
+          <th>貿易包</th>
+          <th>最高利潤率</th>
+          <th>最佳城市</th>
+        </tr>
+      </thead>
+      <tbody id="top3-profitrate-tbody"></tbody>
+    </table>
+  </div>
+
   <script>
-    // 1. 各材料預設交易所單價
+    // ========== 1. 各材料預設交易所單價 ========== //
     const materialPrices = {
       "Potato": 0,
       "Corn": 0,
@@ -72,7 +127,7 @@
       "Ground Flour": 0
     };
 
-    // 2. 所有貿易包的材料需求
+    // ========== 2. 貿易包 (材料需求) ========== //
     const tradePackages = [
       { name: "Brined Shank", materials: [ { name: "Shank", quantity: 70 }, { name: "Salt", quantity: 14 }, { name: "Pepper", quantity: 165 } ] },
       { name: "Sajecho's Spices", materials: [ { name: "Salt", quantity: 15 }, { name: "Orange", quantity: 20 }, { name: "Onion", quantity: 150 }, { name: "Pepper", quantity: 55 } ] },
@@ -113,9 +168,9 @@
       { name: "Strawberry Cakes", materials: [ { name: "Ground Flour", quantity: 186 }, { name: "Milk", quantity: 32 }, { name: "Strawberry", quantity: 400 }, { name: "Honey", quantity: 120 } ] }
     ];
 
-    // 3. 城市距離表 & 售價公式：
-    //    售出價格 = ((distance * 15) + 35000) * (需求%)
-    //    利潤率 = (售出價格 - 總成本) / 總成本 * 100%
+    // ========== 3. 城市 & 計算公式 ==========
+    // 售出價格 = ((distance * 15) + 35000) * 需求%
+    // 利潤率 = (售出價格 - 總成本) / 總成本 * 100%
     const cities = [
       { id: "riverend",   name: "Riverend",   distance: 2228 },
       { id: "margrove",   name: "Margrove",   distance: 1789 },
@@ -126,62 +181,77 @@
       { id: "defiance",   name: "Defiance",   distance: 2721 }
     ];
 
-    // ========== 產生「材料價格」輸入表格 ========== //
+    // ====================================== //
+    // 產生「材料價格」輸入表格
     function renderMaterialsTable() {
       const table = document.getElementById("materials-table");
       table.innerHTML = Object.keys(materialPrices).map(material => `
         <tr>
           <td>${material}</td>
           <td>
-            <input type="number" id="${material}-price"
-                   value="0" min="0"
-                   onchange="updateMaterialPrice('${material}')">
+            <input
+              type="number"
+              id="${material}-price"
+              value="0"
+              min="0"
+              onchange="updateMaterialPrice('${material}')"
+            />
           </td>
         </tr>
       `).join('');
     }
 
     function updateMaterialPrice(material) {
-      materialPrices[material] = parseFloat(document.getElementById(`${material}-price`).value) || 0;
-      updateAllCosts();  // 更新所有計算器
+      const val = parseFloat(document.getElementById(`${material}-price`).value) || 0;
+      materialPrices[material] = val;
+      updateAllCosts();
     }
 
-    // ========== 產生「各貿易包」計算器 ========== //
+    // ====================================== //
+    // 產生「各貿易包計算器」
     function renderCalculators() {
-      document.getElementById('new-calculators').innerHTML = '';
-      tradePackages.forEach(pkg => createCalculator(pkg));
+      const container = document.getElementById('new-calculators');
+      container.innerHTML = '';
+      tradePackages.forEach(pkg => {
+        const div = document.createElement('div');
+        div.classList.add('package-container');
+        div.innerHTML = createPackageCalculatorHTML(pkg);
+        container.appendChild(div);
+      });
     }
 
-    // 建立單一貿易包計算器
-    function createCalculator(pkg) {
-      const container = document.createElement('div');
+    function createPackageCalculatorHTML(pkg) {
       const packageName = pkg.name.toLowerCase().replace(/\s/g, '-');
 
-      // 材料清單
-      const materialsRows = pkg.materials.map(material => `
+      // 1) 材料表格
+      const materialsRows = pkg.materials.map(mat => `
         <tr>
-          <td>${material.name}</td>
-          <td>${material.quantity}</td>
-          <td id="${packageName}-${material.name.toLowerCase()}-price">0</td>
-          <td id="${packageName}-${material.name.toLowerCase()}-cost">0</td>
+          <td>${mat.name}</td>
+          <td>${mat.quantity}</td>
+          <td id="${packageName}-${mat.name.toLowerCase()}-price">0</td>
+          <td id="${packageName}-${mat.name.toLowerCase()}-cost">0</td>
         </tr>
       `).join('');
 
-      // 城市售價&利潤率表
+      // 2) 城市售價 & 利潤率
       const citiesRows = cities.map(city => `
         <tr>
           <td>${city.name}</td>
           <td>
-            <input type="number" id="${packageName}-${city.id}-demand"
-                   value="0" step="0.1"
-                   onchange="updateAllCosts()">
+            <input
+              type="number"
+              id="${packageName}-${city.id}-demand"
+              value="0"
+              step="0.1"
+              onchange="updateAllCosts()"
+            />
           </td>
           <td id="${packageName}-${city.id}-sale-price">0</td>
           <td id="${packageName}-${city.id}-profit-rate">0%</td>
         </tr>
       `).join('');
 
-      container.innerHTML = `
+      return `
         <h2>${pkg.name} 計算器</h2>
         <table>
           <thead>
@@ -198,7 +268,6 @@
         </table>
         <p><strong>總成本:</strong> <span id="${packageName}-total-cost">0</span></p>
 
-        <!-- 城市售價表格 -->
         <table>
           <thead>
             <tr>
@@ -213,10 +282,10 @@
           </tbody>
         </table>
       `;
-      document.getElementById('new-calculators').appendChild(container);
     }
 
-    // ========== 更新成本計算邏輯 ========== //
+    // ====================================== //
+    // 更新所有貿易包計算結果
     function updateAllCosts() {
       tradePackages.forEach(pkg => {
         try {
@@ -225,32 +294,34 @@
           console.error(`Error updating package: ${pkg.name}`, e);
         }
       });
+      // 更新完所有包裹後，再更新「利潤排行」表格
+      renderRankings();
     }
 
+    // 計算單一貿易包的成本 & 城市售價/利潤率
     function updatePackageCosts(pkg) {
       const packageName = pkg.name.toLowerCase().replace(/\s/g, '-');
       let totalCost = 0;
 
-      // 1) 計算「材料成本」及「總成本」
-      pkg.materials.forEach(material => {
-        const price = materialPrices[material.name] || 0;
-        const cost  = material.quantity * price;
+      // 1) 計算材料成本
+      pkg.materials.forEach(mat => {
+        const price = materialPrices[mat.name] || 0;
+        const cost  = mat.quantity * price;
 
-        document.getElementById(`${packageName}-${material.name.toLowerCase()}-price`).innerText = price.toFixed(2);
-        document.getElementById(`${packageName}-${material.name.toLowerCase()}-cost`).innerText  = cost.toFixed(2);
+        document.getElementById(`${packageName}-${mat.name.toLowerCase()}-price`).innerText = price.toFixed(2);
+        document.getElementById(`${packageName}-${mat.name.toLowerCase()}-cost`).innerText  = cost.toFixed(2);
+
         totalCost += cost;
       });
 
       document.getElementById(`${packageName}-total-cost`).innerText = totalCost.toFixed(2);
 
-      // 2) 計算「城市售出價格」與「利潤率」
-      updateCityPrices(packageName, totalCost);
-    }
-
-    // 根據城市距離 & 使用者輸入的「需求%」，計算售價和利潤率
-    function updateCityPrices(packageName, totalCost) {
+      // 2) 計算各城市的售出價格 & 利潤率
       cities.forEach(city => {
-        const demandPercent = parseFloat(document.getElementById(`${packageName}-${city.id}-demand`).value) || 0;
+        const demandPercent = parseFloat(
+          document.getElementById(`${packageName}-${city.id}-demand`).value
+        ) || 0;
+
         // 售出價格 = ((distance * 15) + 35000) * 需求%
         const salePrice = ((city.distance * 15) + 35000) * demandPercent;
         // 利潤率 = (售出價格 - 總成本) / 總成本 * 100%
@@ -262,7 +333,93 @@
       });
     }
 
-    // ========== 初始化 ========== //
+    // ====================================== //
+    // 取得「最佳利潤」與「最佳利潤率」並排名
+    function renderRankings() {
+      // 先把每個貿易包的「最高利潤」與「最高利潤率」算出來
+      const results = tradePackages.map(pkg => {
+        const packageName = pkg.name.toLowerCase().replace(/\s/g, '-');
+        // 總成本
+        const totalCost = parseFloat(document.getElementById(`${packageName}-total-cost`).innerText) || 0;
+
+        // 找出最高利潤 & 對應城市
+        let bestProfit = -Infinity;
+        let bestProfitCity = "";
+        // 找出最高利潤率 & 對應城市
+        let bestProfitRate = -Infinity;
+        let bestProfitRateCity = "";
+
+        cities.forEach(city => {
+          const salePrice = parseFloat(document.getElementById(`${packageName}-${city.id}-sale-price`).innerText) || 0;
+          const profit = salePrice - totalCost;
+
+          // profit-rate 文字中含 '%'
+          const profitRateStr = document.getElementById(`${packageName}-${city.id}-profit-rate`).innerText.replace('%','');
+          const profitRateVal = parseFloat(profitRateStr) || 0;
+
+          if (profit > bestProfit) {
+            bestProfit = profit;
+            bestProfitCity = city.name;
+          }
+          if (profitRateVal > bestProfitRate) {
+            bestProfitRate = profitRateVal;
+            bestProfitRateCity = city.name;
+          }
+        });
+
+        return {
+          packageName: pkg.name,
+          bestProfit,
+          bestProfitCity,
+          bestProfitRate,
+          bestProfitRateCity
+        };
+      });
+
+      // 依「利潤」排序取前三名
+      const top3Profit = [...results]
+        .sort((a, b) => b.bestProfit - a.bestProfit)
+        .slice(0, 3);
+
+      // 依「利潤率」排序取前三名
+      const top3ProfitRate = [...results]
+        .sort((a, b) => b.bestProfitRate - a.bestProfitRate)
+        .slice(0, 3);
+
+      // 更新表格顯示
+      fillRankingTable("top3-profit-tbody", top3Profit, "profit");
+      fillRankingTable("top3-profitrate-tbody", top3ProfitRate, "profitRate");
+    }
+
+    // 將計算好的前三名資料顯示到對應的表格
+    function fillRankingTable(tbodyId, dataList, mode) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = dataList.map((item, index) => {
+        if (mode === "profit") {
+          return `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${item.packageName}</td>
+              <td>${item.bestProfit.toFixed(2)}</td>
+              <td>${item.bestProfitCity}</td>
+            </tr>
+          `;
+        } else {
+          // profitRate
+          return `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${item.packageName}</td>
+              <td>${item.bestProfitRate.toFixed(2)}%</td>
+              <td>${item.bestProfitRateCity}</td>
+            </tr>
+          `;
+        }
+      }).join('');
+    }
+
+    // ====================================== //
+    // 初始化
     window.onload = () => {
       // 1) 先渲染材料表
       renderMaterialsTable();
