@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>貿易包計算器</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    table { margin-bottom: 10px; border-collapse: collapse; }
+    th, td { border: 1px solid #999; padding: 5px; }
+    input { width: 60px; }
+  </style>
+</head>
+<body>
+  <h1>貿易包計算器</h1>
+
+  <!-- 材料交易所單價表格 -->
+  <h2>材料交易所單價</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>材料</th>
+        <th>交易所單價</th>
+      </tr>
+    </thead>
+    <tbody id="materials-table"></tbody>
+  </table>
+
+  <div id="new-calculators"></div>
+
+  <script>
+    // 1. 各材料預設交易所單價
+    const materialPrices = {
+      "Potato": 0,
+      "Corn": 0,
+      "Wheat": 0,
+      "Carrot": 0,
+      "Cabbage": 0,
+      "Pepper": 0,
+      "Onion": 0,
+      "Beans": 0,
+      "Pumpkin": 0,
+      "Pea": 0,
+      "Garlic": 0,
+      "Acorn": 0,
+      "Brocolli": 0,
+      "Apple": 0,
+      "Grape": 0,
+      "Blueberry": 0,
+      "Cherry": 0,
+      "Orange": 0,
+      "Strawberry": 0,
+      "Banana": 0,
+      "Watermelon": 0,
+      "Moonberry": 0,
+      "Sunberry": 0,
+      "Shank": 0,
+      "Chicken": 0,
+      "Egg": 0,
+      "Milk": 0,
+      "Cheese": 0,
+      "Honey": 0,
+      "Beef": 0,
+      "Cotton": 0,
+      "Hide": 0,
+      "Wool": 0,
+      "Salt": 0,
+      "Stone": 0,
+      "Copper Ore": 0,
+      "Coal": 0,
+      "Small Log": 0,
+      "Ground Flour": 0
+    };
+
+    // 2. 所有貿易包的材料需求
+    const tradePackages = [
+      { name: "Brined Shank", materials: [ { name: "Shank", quantity: 70 }, { name: "Salt", quantity: 14 }, { name: "Pepper", quantity: 165 } ] },
+      { name: "Sajecho's Spices", materials: [ { name: "Salt", quantity: 15 }, { name: "Orange", quantity: 20 }, { name: "Onion", quantity: 150 }, { name: "Pepper", quantity: 55 } ] },
+      { name: "Kabbar's Omelets", materials: [ { name: "Egg", quantity: 145 }, { name: "Cheese", quantity: 35 }, { name: "Pepper", quantity: 148 } ] },
+      { name: "Building Materials", materials: [ { name: "Stone", quantity: 240 }, { name: "Small Log", quantity: 185 }, { name: "Hide", quantity: 68 } ] },
+      { name: "Butcher's Box", materials: [ { name: "Chicken", quantity: 38 }, { name: "Beef", quantity: 90 }, { name: "Shank", quantity: 30 }, { name: "Cheese", quantity: 5 } ] },
+      { name: "Slums Provisions", materials: [ { name: "Small Log", quantity: 200 }, { name: "Shank", quantity: 65 }, { name: "Potato", quantity: 690 } ] },
+      { name: "Settler's Rations", materials: [ { name: "Corn", quantity: 200 }, { name: "Potato", quantity: 650 }, { name: "Shank", quantity: 56 } ] },
+      { name: "Pickled Vegetables", materials: [ { name: "Cabbage", quantity: 238 }, { name: "Carrot", quantity: 300 }, { name: "Salt", quantity: 12 } ] },
+      { name: "Dairy Delivery", materials: [ { name: "Milk", quantity: 80 }, { name: "Cheese", quantity: 22 }, { name: "Egg", quantity: 246 } ] },
+      { name: "Crafting Basics", materials: [ { name: "Copper Ore", quantity: 140 }, { name: "Hide", quantity: 55 }, { name: "Small Log", quantity: 200 } ] },
+      { name: "Campfire Roast", materials: [ { name: "Small Log", quantity: 120 }, { name: "Stone", quantity: 220 }, { name: "Chicken", quantity: 68 }, { name: "Potato", quantity: 155 } ] },
+      { name: "Basic Rations", materials: [ { name: "Wheat", quantity: 316 }, { name: "Corn", quantity: 110 }, { name: "Apple", quantity: 35 }, { name: "Shank", quantity: 25 } ] },
+      { name: "Ravencrest Finest Wears", materials: [ { name: "Cotton", quantity: 125 }, { name: "Wool", quantity: 78 }, { name: "Hide", quantity: 50 } ] },
+      { name: "Margrove Ale Ingredients", materials: [ { name: "Wheat", quantity: 400 }, { name: "Acorn", quantity: 12 }, { name: "Pumpkin", quantity: 45 } ] },
+      { name: "Noble Delicacies", materials: [ { name: "Moonberry", quantity: 175 }, { name: "Acorn", quantity: 15 }, { name: "Pepper", quantity: 70 } ] },
+      { name: "Rohna Smoked Ham", materials: [ { name: "Shank", quantity: 40 }, { name: "Acorn", quantity: 30 }, { name: "Pea", quantity: 92 }, { name: "Salt", quantity: 8 } ] },
+      { name: "Vegetable Stew", materials: [ { name: "Brocolli", quantity: 55 }, { name: "Pumpkin", quantity: 55 }, { name: "Beans", quantity: 215 }, { name: "Potato", quantity: 250 } ] },
+      { name: "Pie Making Kit", materials: [ { name: "Apple", quantity: 56 }, { name: "Sunberry", quantity: 65 }, { name: "Cherry", quantity: 25 }, { name: "Ground Flour", quantity: 60 } ] },
+      { name: "Ravencrest Greens", materials: [ { name: "Brocolli", quantity: 128 }, { name: "Pea", quantity: 112 }, { name: "Cabbage", quantity: 160 } ] },
+      { name: "Aged Meat", materials: [ { name: "Beef", quantity: 75 }, { name: "Salt", quantity: 10 }, { name: "Garlic", quantity: 208 } ] },
+      { name: "General Spices", materials: [ { name: "Garlic", quantity: 148 }, { name: "Onion", quantity: 105 }, { name: "Pepper", quantity: 118 }, { name: "Salt", quantity: 13 } ] },
+      { name: "Berry Basket", materials: [ { name: "Strawberry", quantity: 200 }, { name: "Blueberry", quantity: 445 }, { name: "Moonberry", quantity: 30 }, { name: "Sunberry", quantity: 100 } ] },
+      { name: "Crisp Produce", materials: [ { name: "Apple", quantity: 55 }, { name: "Brocolli", quantity: 55 }, { name: "Pea", quantity: 133 }, { name: "Beans", quantity: 133 } ] },
+      { name: "Winemakers Kit", materials: [ { name: "Grape", quantity: 200 }, { name: "Blueberry", quantity: 385 }, { name: "Moonberry", quantity: 92 } ] },
+      { name: "Fried Chicken", materials: [ { name: "Chicken", quantity: 75 }, { name: "Onion", quantity: 80 }, { name: "Garlic", quantity: 120 }, { name: "Ground Flour", quantity: 95 } ] },
+      { name: "Exotic Fruits", materials: [ { name: "Watermelon", quantity: 52 }, { name: "Sunberry", quantity: 70 }, { name: "Moonberry", quantity: 62 } ] },
+      { name: "Bakers Basics", materials: [ { name: "Milk", quantity: 97 }, { name: "Egg", quantity: 240 }, { name: "Ground Flour", quantity: 230 } ] },
+      { name: "Sailor's Remedy", materials: [ { name: "Carrot", quantity: 260 }, { name: "Orange", quantity: 20 }, { name: "Beans", quantity: 155 }, { name: "Blueberry", quantity: 535 } ] },
+      { name: "Kindling Kit", materials: [ { name: "Small Log", quantity: 175 }, { name: "Coal", quantity: 124 }, { name: "Cotton", quantity: 70 } ] },
+      { name: "Glaceforde Explorers Kit", materials: [ { name: "Wool", quantity: 106 }, { name: "Small Log", quantity: 110 }, { name: "Coal", quantity: 100 }, { name: "Cotton", quantity: 20 } ] },
+      { name: "Juicers Box", materials: [ { name: "Apple", quantity: 64 }, { name: "Strawberry", quantity: 162 }, { name: "Cherry", quantity: 26 }, { name: "Banana", quantity: 12 } ] },
+      { name: "Seabreeze Rum", materials: [ { name: "Corn", quantity: 200 }, { name: "Cabbage", quantity: 65 }, { name: "Banana", quantity: 30 }, { name: "Blueberry", quantity: 212 } ] },
+      { name: "Sajecho Fruit Basket", materials: [ { name: "Banana", quantity: 40 }, { name: "Watermelon", quantity: 20 }, { name: "Orange", quantity: 14 }, { name: "Grape", quantity: 94 } ] },
+      { name: "Fruit Basket", materials: [ { name: "Grape", quantity: 136 }, { name: "Watermelon", quantity: 30 }, { name: "Cherry", quantity: 45 } ] },
+      { name: "Sombreshade's Pie", materials: [ { name: "Pumpkin", quantity: 60 }, { name: "Milk", quantity: 60 }, { name: "Ground Flour", quantity: 110 }, { name: "Honey", quantity: 80 } ] },
+      { name: "Barbecue Specialty", materials: [ { name: "Beef", quantity: 68 }, { name: "Chicken", quantity: 26 }, { name: "Coal", quantity: 42 }, { name: "Honey", quantity: 100 } ] },
+      { name: "Strawberry Cakes", materials: [ { name: "Ground Flour", quantity: 186 }, { name: "Milk", quantity: 32 }, { name: "Strawberry", quantity: 400 }, { name: "Honey", quantity: 120 } ] }
+    ];
+
+    // 3. 城市距離表 & 售價公式：
+    //    售出價格 = ((distance * 15) + 35000) * (需求%)
+    //    利潤率 = (售出價格 - 總成本) / 總成本 * 100%
+    const cities = [
+      { id: "riverend",   name: "Riverend",   distance: 2228 },
+      { id: "margrove",   name: "Margrove",   distance: 1789 },
+      { id: "orcabay",    name: "Orca Bay",   distance: 980  },
+      { id: "tarmire",    name: "Tarmire",    distance: 2412 },
+      { id: "darzuac",    name: "Darzuac",    distance: 2593 },
+      { id: "ravencrest", name: "Ravencrest", distance: 1578 },
+      { id: "defiance",   name: "Defiance",   distance: 2721 }
+    ];
+
+    // ========== 產生「材料價格」輸入表格 ========== //
+    function renderMaterialsTable() {
+      const table = document.getElementById("materials-table");
+      table.innerHTML = Object.keys(materialPrices).map(material => `
+        <tr>
+          <td>${material}</td>
+          <td>
+            <input type="number" id="${material}-price"
+                   value="0" min="0"
+                   onchange="updateMaterialPrice('${material}')">
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateMaterialPrice(material) {
+      materialPrices[material] = parseFloat(document.getElementById(`${material}-price`).value) || 0;
+      updateAllCosts();  // 更新所有計算器
+    }
+
+    // ========== 產生「各貿易包」計算器 ========== //
+    function renderCalculators() {
+      document.getElementById('new-calculators').innerHTML = '';
+      tradePackages.forEach(pkg => createCalculator(pkg));
+    }
+
+    // 建立單一貿易包計算器
+    function createCalculator(pkg) {
+      const container = document.createElement('div');
+      const packageName = pkg.name.toLowerCase().replace(/\s/g, '-');
+
+      // 材料清單
+      const materialsRows = pkg.materials.map(material => `
+        <tr>
+          <td>${material.name}</td>
+          <td>${material.quantity}</td>
+          <td id="${packageName}-${material.name.toLowerCase()}-price">0</td>
+          <td id="${packageName}-${material.name.toLowerCase()}-cost">0</td>
+        </tr>
+      `).join('');
+
+      // 城市售價&利潤率表
+      const citiesRows = cities.map(city => `
+        <tr>
+          <td>${city.name}</td>
+          <td>
+            <input type="number" id="${packageName}-${city.id}-demand"
+                   value="0" step="0.1"
+                   onchange="updateAllCosts()">
+          </td>
+          <td id="${packageName}-${city.id}-sale-price">0</td>
+          <td id="${packageName}-${city.id}-profit-rate">0%</td>
+        </tr>
+      `).join('');
+
+      container.innerHTML = `
+        <h2>${pkg.name} 計算器</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>材料</th>
+              <th>數量</th>
+              <th>交易所單價</th>
+              <th>成本</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${materialsRows}
+          </tbody>
+        </table>
+        <p><strong>總成本:</strong> <span id="${packageName}-total-cost">0</span></p>
+
+        <!-- 城市售價表格 -->
+        <table>
+          <thead>
+            <tr>
+              <th>地點</th>
+              <th>需求%</th>
+              <th>售出價格</th>
+              <th>利潤率</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${citiesRows}
+          </tbody>
+        </table>
+      `;
+      document.getElementById('new-calculators').appendChild(container);
+    }
+
+    // ========== 更新成本計算邏輯 ========== //
+    function updateAllCosts() {
+      tradePackages.forEach(pkg => {
+        try {
+          updatePackageCosts(pkg);
+        } catch (e) {
+          console.error(`Error updating package: ${pkg.name}`, e);
+        }
+      });
+    }
+
+    function updatePackageCosts(pkg) {
+      const packageName = pkg.name.toLowerCase().replace(/\s/g, '-');
+      let totalCost = 0;
+
+      // 1) 計算「材料成本」及「總成本」
+      pkg.materials.forEach(material => {
+        const price = materialPrices[material.name] || 0;
+        const cost  = material.quantity * price;
+
+        document.getElementById(`${packageName}-${material.name.toLowerCase()}-price`).innerText = price.toFixed(2);
+        document.getElementById(`${packageName}-${material.name.toLowerCase()}-cost`).innerText  = cost.toFixed(2);
+        totalCost += cost;
+      });
+
+      document.getElementById(`${packageName}-total-cost`).innerText = totalCost.toFixed(2);
+
+      // 2) 計算「城市售出價格」與「利潤率」
+      updateCityPrices(packageName, totalCost);
+    }
+
+    // 根據城市距離 & 使用者輸入的「需求%」，計算售價和利潤率
+    function updateCityPrices(packageName, totalCost) {
+      cities.forEach(city => {
+        const demandPercent = parseFloat(document.getElementById(`${packageName}-${city.id}-demand`).value) || 0;
+        // 售出價格 = ((distance * 15) + 35000) * 需求%
+        const salePrice = ((city.distance * 15) + 35000) * demandPercent;
+        // 利潤率 = (售出價格 - 總成本) / 總成本 * 100%
+        const profitRate = ((salePrice - totalCost) / totalCost) * 100;
+
+        document.getElementById(`${packageName}-${city.id}-sale-price`).innerText = salePrice.toFixed(2);
+        document.getElementById(`${packageName}-${city.id}-profit-rate`).innerText =
+          isNaN(profitRate) ? '0%' : `${profitRate.toFixed(2)}%`;
+      });
+    }
+
+    // ========== 初始化 ========== //
+    window.onload = () => {
+      // 1) 先渲染材料表
+      renderMaterialsTable();
+      // 2) 再渲染所有貿易包計算器
+      renderCalculators();
+      // 3) 最後做一次初始更新
+      updateAllCosts();
+    };
+  </script>
+</body>
+</html>
